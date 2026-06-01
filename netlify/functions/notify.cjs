@@ -88,7 +88,16 @@ exports.handler = async (event) => {
     const response = await admin.messaging().sendEachForMulticast({
       tokens: fcmTokens,
       notification: { title: msg.title, body: msg.body },
-      webpush: { fcmOptions: { link: '/' } }
+      data: { title: msg.title, body: msg.body },
+      webpush: {
+        notification: {
+          title: msg.title,
+          body: msg.body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png'
+        },
+        fcmOptions: { link: '/' }
+      }
     })
 
     // 6) Netejar tokens invàlids

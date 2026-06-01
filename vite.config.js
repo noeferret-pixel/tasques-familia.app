@@ -25,7 +25,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-        navigateFallback: '/index.html'
+        navigateFallback: '/index.html',
+        // Importa el codi de Firebase Messaging dins del SW de la PWA,
+        // perquè un sol service worker gestioni PWA + notificacions en segon pla.
+        importScripts: ['firebase-messaging-sw.js']
       },
       devOptions: { enabled: false }
     })

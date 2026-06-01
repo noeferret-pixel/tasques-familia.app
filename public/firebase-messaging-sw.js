@@ -17,10 +17,25 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || {}
-  self.registration.showNotification(title || 'Tasques Família', {
-    body: body || 'Tens tasques pendents',
+  const data = payload.notification || payload.data || {}
+  self.registration.showNotification(data.title || 'Tasques Família', {
+    body: data.body || 'Tens tasques pendents',
     icon: '/icon-192.png',
-    badge: '/icon-192.png'
+    badge: '/icon-192.png',
+    tag: 'tasques-familia',
+    renotify: true
   })
+})
+
+// En clicar la notificació, obre (o enfoca) l'app
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus()
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('/')
+    })
+  )
 })
