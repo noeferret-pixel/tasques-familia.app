@@ -9,7 +9,8 @@ const ROTATIVES = [
   { id: 'taula_cuina',      week: ['bru','terry','ariadna','biel','ona','bru','terry'] },
   { id: 'gats_menjar',      week: ['ariadna','biel','ona','bru','terry','ariadna','biel'] },
   { id: 'gats_terra',       week: ['biel','ona','bru','terry','ariadna','biel','ona'] },
-  { id: 'exterior',         week: ['terry','ariadna','biel','ona','bru','terry','ariadna'] }
+  { id: 'exterior',         week: ['terry','ariadna','biel','ona','bru','terry','ariadna'] },
+  { id: 'gats_sofa',        week: ['ona','bru','terry','ariadna','biel','ona','bru'] }
 ]
 
 // Fixes amb dies opcionals (0=DL ... 6=DG). Sense `days` = cada dia.

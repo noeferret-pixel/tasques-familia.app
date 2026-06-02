@@ -50,7 +50,9 @@ export const ROTATIVES = [
   { id: 'gats_terra', name: 'Terra gats', icon: '🧹',
     week: ['biel','ona','bru','terry','ariadna','biel','ona'] },
   { id: 'exterior', name: 'Exterior escombrar', icon: '🌿',
-    week: ['terry','ariadna','biel','ona','bru','terry','ariadna'] }
+    week: ['terry','ariadna','biel','ona','bru','terry','ariadna'] },
+  { id: 'gats_sofa', name: 'Aspirar sofà gats', icon: '🛋️',
+    week: ['ona','bru','terry','ariadna','biel','ona','bru'] }
 ]
 
 // Tasques fixes. Si una tasca té camp `days`, només surt aquells dies de la
