@@ -194,6 +194,15 @@ El rànquing mostra punts reals consolidats, no només els +10 per tasca:
 - **+20** per cada dia en què completes TOTES les teves tasques
 - **+100** per cada setmana (dilluns–diumenge) amb els 7 dies complets
 
+**Recompenses** (segons el quadrant de tasques):
+- Cada **200 punts** → un dia lliure de tasques (es reparteixen entre els altres 5).
+- Cada **1000 punts** → tries el sopar de l'endemà.
+
+Aquestes recompenses es calculen automàticament a `scoreboard.cjs` i es mostren
+a la pestanya Rànquing. Els llindars 200/1000 es poden canviar a les constants
+`REWARD_FREE_DAY` i `REWARD_CHOOSE_DINNER` de `netlify/functions/scoreboard.cjs`
+(i, si vols, a `src/pages/Ranquing.jsx` per al càlcul de reserva).
+
 La funció `netlify/functions/scoreboard.cjs` fa aquest càlcul i el desa a la col·lecció
 `scores` de Firestore. El rànquing del frontend llegeix d'allà (i si encara no s'ha
 consolidat mai, fa un càlcul de reserva amb els +10 base).
