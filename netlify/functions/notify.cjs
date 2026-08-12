@@ -31,6 +31,16 @@ const MESSAGES = {
 const DAY14_MESSAGE = { title: 'Bon dia! 😏', body: 'Avui esmorza fort... que el dia ho demana 💪' }
 // const DAY14_MESSAGE = { title: 'Bon dia! 😏', body: 'Agafa un cagarro i esmorza!' }
 
+// Aniversaris (MM-DD) i noms per a la felicitació del matí.
+const BIRTHDAYS = {
+  '06-15': 'Noe', '04-18': 'Terry', '01-12': 'Ariadna',
+  '09-02': 'Biel', '10-01': 'Ona', '06-11': 'Bru'
+}
+function birthdayName(date) {
+  const mmdd = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return BIRTHDAYS[mmdd] || null
+}
+
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {}
 
@@ -45,6 +55,12 @@ exports.handler = async (event) => {
   // El dia 14 de cada mes, al matí, missatge especial
   if (slot === 'morning' && new Date().getDate() === 14) {
     msg = DAY14_MESSAGE
+  }
+
+  // Si algú fa anys avui, la notificació del matí és una felicitació per a tothom.
+  const bdayName = birthdayName(new Date())
+  if (slot === 'morning' && bdayName) {
+    msg = { title: `Feliç aniversari, ${bdayName}! 🎂`, body: `Avui ${bdayName} no fa tasques. Felicita'l/la! 🎉` }
   }
 
   try {

@@ -22,6 +22,15 @@ function initAdmin() {
 
 const USER_IDS = ['noe', 'terry', 'ariadna', 'biel', 'ona', 'bru']
 
+// Recompenses (del document): cada 200 punts -> 1 dia lliure;
+// cada 1000 punts -> tria el sopar de l'endemà.
+// Data d'inici de temporada: no es compta res anterior a aquesta data.
+// Per reiniciar el rànquing en el futur, canvia aquesta data.
+const SEASON_START = '2026-08-14'
+
+const REWARD_FREE_DAY = 200
+const REWARD_CHOOSE_DINNER = 1000
+
 // Clau de setmana ISO aproximada: any + número de setmana (dilluns com a inici).
 function weekKey(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
@@ -46,6 +55,12 @@ exports.handler = async (event) => {
 
     const to = new Date()
     const from = new Date(); from.setDate(to.getDate() - (days - 1))
+
+    // No comptar res anterior a l'inici de temporada.
+    if (dateKey(from) < SEASON_START) {
+      const [y, m, d] = SEASON_START.split('-').map(Number)
+      from.setFullYear(y, m - 1, d)
+    }
 
     // Carregar absències i totes les completions del rang
     const [absSnap, compSnap] = await Promise.all([
@@ -116,10 +131,16 @@ exports.handler = async (event) => {
       const s = score[u]
       const total = s.base + s.dayBonus + s.weekBonus
       out[u] = total
+      const freeDays = Math.floor(total / REWARD_FREE_DAY)
+      const dinnerChoices = Math.floor(total / REWARD_CHOOSE_DINNER)
       batch.set(db.collection('scores').doc(u), {
         userId: u, total,
         base: s.base, dayBonus: s.dayBonus, weekBonus: s.weekBonus,
-        perfectDays: s.perfectDays, updated: Date.now()
+        perfectDays: s.perfectDays,
+        freeDays, dinnerChoices,
+        toNextFreeDay: REWARD_FREE_DAY - (total % REWARD_FREE_DAY),
+        toNextDinner: REWARD_CHOOSE_DINNER - (total % REWARD_CHOOSE_DINNER),
+        updated: Date.now()
       })
     }
     await batch.commit()

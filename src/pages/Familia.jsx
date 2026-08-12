@@ -1,96 +1,56 @@
-import { useEffect, useState, useMemo } from 'react'
-import { USERS, COLOR_HEX, dateKey } from '../lib/data'
-import { memberStatus, tasksForUser, reassignedCount } from '../lib/tasks'
-import { listenCompletions, listenAbsences, addAbsence, removeAbsence } from '../lib/store'
-import { Avatar, StatusDot } from '../components/UI'
+import { useState, useEffect } from 'react'
+import { Avatar } from '../components/UI.jsx'
+import { USERS, userById, dateKey } from '../lib/data.js'
+import { subscribeAbsences, addAbsence, removeAbsence } from '../lib/store.js'
 
 export default function Familia() {
-  const today = useMemo(() => new Date(), [])
-  const [completions, setCompletions] = useState([])
   const [absences, setAbsences] = useState([])
-  const [showAbs, setShowAbs] = useState(false)
-
-  useEffect(() => listenCompletions(today, setCompletions), [today])
-  useEffect(() => listenAbsences(setAbsences), [])
-
-  const completedKeys = new Set(completions.map(c => c.key))
-
-  return (
-    <div className="max-w-md mx-auto px-4 pt-6 pb-24">
-      <h1 className="text-2xl font-display font-extrabold text-stone-800 mb-5">La família</h1>
-
-      <div className="space-y-3 mb-6">
-        {USERS.map(u => {
-          const status = memberStatus(u.id, today, absences, completedKeys)
-          const tasks = tasksForUser(u.id, today, absences)
-          const done = tasks.filter(t => completedKeys.has(t.key)).length
-          return (
-            <div key={u.id} className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm">
-              <Avatar userId={u.id} />
-              <div className="flex-1">
-                <p className="font-display font-bold" style={{ color: COLOR_HEX[u.color] }}>{u.name}</p>
-                <p className="text-xs text-stone-400">{done} de {tasks.length} tasques</p>
-              </div>
-              <StatusDot status={status} />
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Avisos d'absència actius avui */}
-      {absences.filter(a => dateKey(today) >= a.from && dateKey(today) <= a.to).map(a => {
-        const n = reassignedCount(a.userId, today, absences)
-        const u = USERS.find(x => x.id === a.userId)
-        if (n === 0 || !u) return null
-        return (
-          <div key={a.id} className="bg-amber-100 text-amber-800 rounded-2xl p-3 mb-2 text-sm font-semibold flex justify-between items-center">
-            <span>{n} tasques reassignades a Noe per absència de {u.name}</span>
-            <button onClick={() => removeAbsence(a.id)} className="text-amber-600 ml-2">✕</button>
-          </div>
-        )
-      })}
-
-      <button onClick={() => setShowAbs(s => !s)}
-        className="w-full bg-stone-800 text-white rounded-2xl py-3 font-display font-bold mt-3">
-        {showAbs ? 'Tancar' : '➕ Marcar absència'}
-      </button>
-
-      {showAbs && <AbsenceForm onAdd={() => setShowAbs(false)} />}
-    </div>
-  )
-}
-
-function AbsenceForm({ onAdd }) {
-  const [userId, setUserId] = useState('biel')
+  const [who, setWho] = useState('ariadna')
   const [from, setFrom] = useState(dateKey(new Date()))
   const [to, setTo] = useState(dateKey(new Date()))
 
-  async function submit() {
-    if (from > to) return
-    await addAbsence(userId, from, to)
-    onAdd()
-  }
+  useEffect(() => subscribeAbsences(setAbsences), [])
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm mt-3 space-y-3 animate-slideup">
-      <select value={userId} onChange={e => setUserId(e.target.value)}
-        className="w-full border border-stone-200 rounded-xl p-2">
-        {USERS.filter(u => u.id !== 'noe').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-      </select>
-      <div className="flex gap-2">
-        <label className="flex-1 text-xs text-stone-400">Des de
+    <div className="max-w-md mx-auto px-4 pt-6 pb-24">
+      <h1 className="font-display text-2xl font-extrabold text-stone-800 mb-1">Família 👨‍👩‍👧‍👦</h1>
+      <p className="text-sm text-stone-400 mb-6">Gestiona absències. Les tasques d'un absent es reparteixen entre la resta.</p>
+
+      <div className="bg-white rounded-3xl p-5 shadow-sm mb-6">
+        <h2 className="font-display font-bold text-stone-700 mb-3">Nova absència</h2>
+        <select value={who} onChange={e => setWho(e.target.value)}
+          className="w-full mb-3 p-3 rounded-xl border border-stone-200 font-semibold text-stone-700">
+          {USERS.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+        <div className="flex gap-2 mb-3">
           <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-            className="w-full border border-stone-200 rounded-xl p-2 text-stone-700" />
-        </label>
-        <label className="flex-1 text-xs text-stone-400">Fins a
+            className="flex-1 p-3 rounded-xl border border-stone-200 text-stone-700" />
           <input type="date" value={to} onChange={e => setTo(e.target.value)}
-            className="w-full border border-stone-200 rounded-xl p-2 text-stone-700" />
-        </label>
+            className="flex-1 p-3 rounded-xl border border-stone-200 text-stone-700" />
+        </div>
+        <button onClick={() => from && to && addAbsence(who, from, to)}
+          className="w-full py-3 rounded-xl bg-stone-800 text-white font-display font-bold active:scale-[0.98] transition">
+          Afegir
+        </button>
       </div>
-      <button onClick={submit}
-        className="w-full bg-amber-500 text-white rounded-xl py-2 font-display font-bold">
-        Confirmar absència
-      </button>
+
+      <h2 className="font-display font-bold text-stone-700 mb-3 px-1">Absències actives</h2>
+      {absences.length === 0 ? (
+        <p className="text-stone-400 text-center py-6">Cap absència registrada</p>
+      ) : (
+        <div className="space-y-3">
+          {absences.map(a => (
+            <div key={a.id} className="flex items-center gap-3 bg-white rounded-2xl p-4 shadow-sm">
+              <Avatar userId={a.userId} size={36} />
+              <div className="flex-1">
+                <p className="font-semibold text-stone-700">{userById(a.userId)?.name}</p>
+                <p className="text-xs text-stone-400">{a.from} → {a.to}</p>
+              </div>
+              <button onClick={() => removeAbsence(a.id)} className="text-red-500 font-semibold text-sm px-2">Treure</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

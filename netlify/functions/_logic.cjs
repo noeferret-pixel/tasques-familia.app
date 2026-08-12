@@ -1,30 +1,40 @@
 // Lògica de tasques duplicada per al servidor (Netlify Function).
 // Es manté en sincronia manual amb src/lib/data.js i src/lib/tasks.js.
-// Si canvies rotacions al frontend, replica-les aquí.
+// Si canvies rotacions al frontend, replica-les EXACTAMENT aquí (keys incloses).
+// Convenció dies: 0=Dilluns ... 6=Diumenge.
+
+const ROTATION = ['noe', 'terry', 'ariadna', 'biel', 'ona', 'bru']
+const KIDS = ['ariadna', 'biel', 'ona', 'bru']
+const ADULTS = ['terry', 'noe']
+
+// Aniversaris (MM-DD). Qui fa anys no fa tasques aquell dia.
+const BIRTHDAYS = {
+  noe: '06-15', terry: '04-18', ariadna: '01-12',
+  biel: '09-02', ona: '10-01', bru: '06-11'
+}
+function birthdayPerson(date) {
+  const mmdd = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return Object.keys(BIRTHDAYS).find(id => BIRTHDAYS[id] === mmdd) || null
+}
 
 const ROTATIVES = [
-  { id: 'rentaplats_dinar', week: ['ariadna','biel','ona','bru','terry','ariadna','biel'] },
-  { id: 'rentaplats_sopar', week: ['biel','ona','bru','terry','ariadna','biel','ona'] },
-  { id: 'escombraries',     week: ['ona','bru','terry','ariadna','biel','ona','bru'] },
-  { id: 'taula_cuina',      week: ['bru','terry','ariadna','biel','ona','bru','terry'] },
-  { id: 'gats_menjar',      week: ['ariadna','biel','ona','bru','terry','ariadna','biel'] },
-  { id: 'gats_terra',       week: ['biel','ona','bru','terry','ariadna','biel','ona'] },
-  { id: 'exterior',         week: ['terry','ariadna','biel','ona','bru','terry','ariadna'] },
-  { id: 'gats_sofa',        week: ['ona','bru','terry','ariadna','biel','ona','bru'] }
+  { id: 'brossa',     week: ['noe','terry','ariadna','biel','ona','bru','noe'] },
+  { id: 'rentaplats', week: ['terry','ariadna','biel','ona','bru','noe','terry'] },
+  { id: 'terrassa',   week: ['ariadna','biel','ona','bru','noe','terry','ariadna'] },
+  { id: 'pati',       week: ['biel','ona','bru','noe','terry','ariadna','biel'] },
+  { id: 'gats_pel',   week: ['ona','bru','noe','terry','ariadna','biel','ona'] },
+  { id: 'regar',      week: ['bru','noe','terry','ariadna','biel','ona','bru'] }
 ]
 
-// Fixes amb dies opcionals (0=DL ... 6=DG). Sense `days` = cada dia.
 const FIXES = {
   noe: [
-    { id: 'fix_roba' },
-    { id: 'fix_lavabos', days: [3] },
-    { id: 'fix_aspiradora', days: [4] },
-    { id: 'fix_pols', days: [4] },
-    { id: 'fix_compra', days: [1] }
+    { id: 'lavabos',           days: [3] },
+    { id: 'rentar_tovalloles', days: [3] },
+    { id: 'pols_terres',       days: [4] },
+    { id: 'rentar_llencols',   days: [4] }
   ],
   terry: [
-    { id: 'fix_manteniment' },
-    { id: 'fix_compra_t', days: [1] }
+    { id: 'manteniment', days: [4] }
   ]
 }
 
@@ -40,12 +50,24 @@ function dateKey(date) {
   return `${y}-${m}-${d}`
 }
 
-function robotTasks(date) {
-  const epochDays = Math.floor(date.getTime() / 86400000)
-  if (epochDays % 2 !== 0) return []
+function epochDays(date) {
+  return Math.floor(date.getTime() / 86400000)
+}
+
+function weekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const day = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+}
+
+function everyTwoDays(date) {
+  if (epochDays(date) % 2 !== 0) return []
   return [
     { id: 'robot_posar', assignee: 'terry' },
-    { id: 'robot_treure', assignee: 'terry' }
+    { id: 'robot_treure', assignee: 'terry' },
+    { id: 'posar_rentadores', assignee: 'noe' }
   ]
 }
 
@@ -54,8 +76,22 @@ function isAbsent(userId, date, absences) {
   return absences.some(a => a.userId === userId && k >= a.from && k <= a.to)
 }
 
-function resolveAssignee(originalId, date, absences) {
-  if (originalId !== 'noe' && isAbsent(originalId, date, absences)) return 'noe'
+function distributeAmongOthers(excludedId, keyBase, date, absences) {
+  const bday = birthdayPerson(date)
+  const candidates = ROTATION.filter(id =>
+    id !== excludedId && id !== bday && !isAbsent(id, date, absences)
+  )
+  if (candidates.length === 0) return excludedId
+  let h = epochDays(date)
+  for (let i = 0; i < keyBase.length; i++) h = (h * 31 + keyBase.charCodeAt(i)) >>> 0
+  return candidates[h % candidates.length]
+}
+
+function resolveAssignee(originalId, date, absences, keyBase) {
+  const bday = birthdayPerson(date)
+  if (isAbsent(originalId, date, absences) || originalId === bday) {
+    return distributeAmongOthers(originalId, keyBase, date, absences)
+  }
   return originalId
 }
 
@@ -63,24 +99,48 @@ function resolveAssignee(originalId, date, absences) {
 function buildDayTasks(date, absences) {
   const di = dayIndex(date)
   const k = dateKey(date)
+  const wk = weekNumber(date)
   const out = []
-  for (const t of ROTATIVES) {
-    const original = t.week[di]
-    out.push({ key: `${t.id}__${k}`, assignee: resolveAssignee(original, date, absences) })
-  }
+
+  const add = (key, original) => out.push({ key, assignee: resolveAssignee(original, date, absences, key) })
+
+  // 1) rotatives
+  for (const t of ROTATIVES) add(`${t.id}__${k}`, t.week[di])
+
+  // 2) cuina
+  const adultToday = ADULTS[epochDays(date) % 2]
+  const kidCook = KIDS[epochDays(date) % KIDS.length]
+  add(`dinar__${k}`, adultToday)
+  add(`sopar__${k}`, adultToday)
+  add(`dinar_kid__${k}`, kidCook)
+  add(`sopar_kid__${k}`, kidCook)
+
+  // 3) fixes de persona
   for (const userId of Object.keys(FIXES)) {
     for (const f of FIXES[userId]) {
       if (f.days && !f.days.includes(di)) continue
-      out.push({ key: `${f.id}__${userId}__${k}`, assignee: resolveAssignee(userId, date, absences) })
+      add(`${f.id}__${userId}__${k}`, userId)
     }
   }
-  for (const r of robotTasks(date)) {
-    out.push({ key: `${r.id}__${k}`, assignee: resolveAssignee(r.assignee, date, absences) })
+
+  // 4) setmanals amb rotació especial
+  if (di === 1) add(`menus_compra__${k}`, ADULTS[wk % 2])
+  if (di === 3) {
+    const kid = KIDS[wk % KIDS.length]
+    add(`lavabos_kid__${k}`, kid)
+    add(`sorra_gats__${k}`, kid)
   }
+  if (di === 4) {
+    const kid = KIDS[wk % KIDS.length]
+    add(`pols_terres_kid__${k}`, kid)
+  }
+
+  // 5) cada dos dies
+  for (const r of everyTwoDays(date)) add(`${r.id}__${k}`, r.assignee)
+
   return out
 }
 
-// Tasques assignades a un usuari concret en un dia (després de reassignar absències).
 function tasksForUser(userId, date, absences) {
   return buildDayTasks(date, absences).filter(t => t.assignee === userId)
 }
