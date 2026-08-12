@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
-import { getMessaging, isSupported } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,15 +12,3 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
-
-// Messaging només si el navegador ho suporta (evita errors a iOS antic)
-export async function getMessagingIfSupported() {
-  try {
-    if (await isSupported()) return getMessaging(app)
-  } catch (e) {
-    console.warn('Messaging no suportat', e)
-  }
-  return null
-}
-
-export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY

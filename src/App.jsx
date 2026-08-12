@@ -1,33 +1,34 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { useAuth } from './lib/auth'
-import { BottomNav } from './components/UI'
-import { listenForeground } from './lib/push'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Familia from './pages/Familia'
-import Setmanals from './pages/Setmanals'
-import Historial from './pages/Historial'
-import Ranquing from './pages/Ranquing'
+import { useAuth } from './lib/auth.jsx'
+import { BottomNav } from './components/UI.jsx'
+import Login from './pages/Login.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import Historial from './pages/Historial.jsx'
+import Ranquing from './pages/Ranquing.jsx'
+import Familia from './pages/Familia.jsx'
+import Setmanals from './pages/Setmanals.jsx'
+
+function AdminRoute({ children }) {
+  const { user } = useAuth()
+  if (!user?.admin) return <Navigate to="/" replace />
+  return children
+}
 
 export default function App() {
   const { user } = useAuth()
-
-  useEffect(() => { if (user) listenForeground() }, [user])
-
   if (!user) return <Login />
 
   return (
-    <>
+    <div className="min-h-screen">
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/familia" element={user.admin ? <Familia /> : <Navigate to="/" />} />
-        <Route path="/setmanals" element={user.admin ? <Setmanals /> : <Navigate to="/" />} />
         <Route path="/historial" element={<Historial />} />
         <Route path="/ranquing" element={<Ranquing />} />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/familia" element={<AdminRoute><Familia /></AdminRoute>} />
+        <Route path="/setmanals" element={<AdminRoute><Setmanals /></AdminRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />
-    </>
+    </div>
   )
 }
